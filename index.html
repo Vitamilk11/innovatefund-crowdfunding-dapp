@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>InnovateFund – ระบบระดมทุนและจ่ายเงินตาม Milestone</title>
+<script src="https://cdn.jsdelivr.net/npm/ethers@6.13.4/dist/ethers.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#f5f4fa;--card:#fff;--ink:#221d3a;--mute:#6b6880;--line:#e4e2ee;--brand:#5b3fd1;--ok:#11845b;--bad:#c4321c;--warn:#b26b00;--info:#1f4fd1}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:'Sarabun',system-ui,sans-serif;background:var(--bg);color:var(--ink);font-size:15px}
+  header{background:var(--ink);color:#fff;padding:16px 24px;display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between}
+  header h1{font-size:18px;margin:0} header small{color:#b5b0cc;display:block;font-weight:400}
+  .bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap} .bar input{width:360px;max-width:60vw}
+  main{max-width:1000px;margin:0 auto;padding:20px}
+  nav{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px}
+  nav button{background:#fff;color:var(--ink);border:1px solid var(--line)}
+  nav button.active{background:var(--brand);color:#fff;border-color:var(--brand)}
+  section{display:none} section.active{display:block}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:20px;margin-bottom:16px}
+  .card h2{margin:0 0 4px;font-size:17px} .hint{margin:0 0 14px;color:var(--mute);font-size:13.5px}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px} .full{grid-column:1/-1}
+  label{display:block;font-size:13px;font-weight:600;margin-bottom:4px}
+  input,textarea,select{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:7px;font:inherit;background:#fff}
+  textarea{min-height:60px}
+  button{padding:9px 16px;border-radius:7px;border:0;background:var(--brand);color:#fff;font:inherit;font-weight:600;cursor:pointer}
+  button.ghost{background:#fff;color:var(--brand);border:1px solid var(--brand)} button.danger{background:var(--bad)} button.okb{background:var(--ok)}
+  button.sm{padding:5px 10px;font-size:13px}
+  .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;align-items:center}
+  .mono{font-family:ui-monospace,Consolas,monospace;font-size:12.5px;word-break:break-all}
+  .badge{display:inline-block;padding:3px 10px;border-radius:99px;font-weight:700;font-size:12.5px}
+  .m0{background:#eceff1;color:#455a64} .m1{background:#fdf1dc;color:var(--warn)} .m2{background:#e3f5ec;color:var(--ok)} .m3{background:#fbe7e3;color:var(--bad)}
+  .t0{color:var(--ok)} .t1{color:var(--brand)} .t2{color:var(--bad)}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th,td{text-align:left;padding:8px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--mute);font-weight:600;font-size:12.5px}
+  .progress{height:14px;background:#ece9f7;border-radius:99px;overflow:hidden;margin:8px 0}
+  .progress>div{height:100%;background:linear-gradient(90deg,#5b3fd1,#8b6cff)}
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:12px 0}
+  .stat{background:#f7f6fc;border-radius:8px;padding:10px 12px} .stat b{display:block;font-size:18px} .stat span{color:var(--mute);font-size:12.5px}
+  .ms-row{display:grid;grid-template-columns:1fr 1fr 34px;gap:8px;margin-bottom:8px}
+  #log{position:fixed;right:16px;bottom:16px;max-width:420px;background:var(--ink);color:#fff;padding:10px 14px;border-radius:8px;font-size:13.5px;display:none;white-space:pre-wrap}
+  .result{margin-top:14px}
+  .members td,.members th{padding:6px 8px}
+  @media(max-width:700px){.grid,.stats{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<header>
+  <div><h1>InnovateFund · Milestone Crowdfunding<small>ระบบระดมทุนและจ่ายเงินตามความสำเร็จบน Ethereum</small></h1></div>
+  <div class="bar">
+    <input id="contractAddr" placeholder="Contract address (0x…) จาก Remix">
+    <button id="btnConnect">เชื่อมต่อ Wallet</button>
+    <span id="acct" class="mono" style="color:#d6d1ee"></span>
+  </div>
+</header>
+
+<main>
+  <!-- ===================== สมาชิกกลุ่ม: แก้ชื่อและรหัสนักศึกษาตรงนี้ ===================== -->
+  <div class="card">
+    <h2>สมาชิกกลุ่ม</h2>
+    <table class="members">
+     <tr><th>ลำดับ</th><th>ชื่อ-นามสกุล</th><th>รหัสนักศึกษา</th></tr>
+      <tr><td>1</td><td>ชื่อ-นามสกุล  นายสิทธิภาพ โอสถ </td><td>รหัสนักศึกษา 66045650 </td></tr>
+      <tr><td>2</td><td>ชื่อ-นามสกุล  อภิวิชญ์ สายแสน</td><td>รหัสนักศึกษา 66073816 </td></tr>
+      <tr><td>3</td><td>ชื่อ-นามสกุล พงศธร เกิดแสง</td><td>รหัสนักศึกษา 66023481 </td></tr>
+      <tr><td>4</td><td>ชื่อ-นามสกุล ณัฐภัทร มารวย</td><td>รหัสนักศึกษา 66053976</td></tr>
+      <tr><td>5</td><td>ชื่อ-นามสกุล จิระพัฒน์ เรืองหิรัญ</td><td>รหัสนักศึกษา  66048864 </td></tr>
+    </table>
+  </div>
+  <!-- ======================================================================================= -->
+
+  <nav>
+    <button data-tab="dash" class="active">3 + 7. Dashboard โครงการ</button>
+    <button data-tab="create">1. สร้างโครงการ</button>
+    <button data-tab="owner">4. ขอเบิกเงิน</button>
+    <button data-tab="mine">โครงการของฉัน</button>
+  </nav>
+
+  <!-- Dashboard -->
+  <section id="dash" class="active">
+    <div class="card">
+      <h2>ดูโครงการ</h2>
+      <p class="hint">ใส่เลขโครงการเพื่อดูยอดระดมทุน เวลาที่เหลือ สถานะ Milestone และประวัติเงินเข้า-ออก รวมถึงสนับสนุน โหวต และขอคืนเงินได้จากหน้านี้</p>
+      <div class="row" style="margin-top:0"><input id="dId" type="number" min="1" placeholder="เลขโครงการ (Campaign ID)" style="max-width:240px"><button id="btnLoad">แสดงข้อมูล</button></div>
+      <div id="dashOut" class="result"></div>
+    </div>
+  </section>
+
+  <!-- Create -->
+  <section id="create">
+    <div class="card">
+      <h2>สร้างโครงการระดมทุน (Create Campaign)</h2>
+      <p class="hint">ยอดจัดสรรของทุก Milestone รวมกันต้องเท่ากับเป้าหมาย เมื่อระดมได้เกินเป้า แต่ละ Milestone จะได้รับตามสัดส่วนเดิม</p>
+      <div class="grid">
+        <div><label>ชื่อโครงการ</label><input id="cTitle" placeholder="Smart Farm IoT"></div>
+        <div><label>เป้าหมายเงินทุน (ETH)</label><input id="cGoal" type="number" step="any" placeholder="คำนวณจาก Milestone อัตโนมัติ" readonly></div>
+        <div class="full"><label>รายละเอียดโครงการ</label><textarea id="cDesc"></textarea></div>
+        <div><label>ระยะเวลาระดมทุน</label><input id="cDur" type="number" min="1" value="7"></div>
+        <div><label>หน่วย</label><select id="cUnit"><option value="86400">วัน</option><option value="3600">ชั่วโมง</option><option value="60">นาที (สำหรับทดสอบ)</option></select></div>
+        <div class="full"><label>Milestone (รายละเอียด / ยอดจัดสรร ETH)</label><div id="msList"></div>
+          <button class="ghost sm" id="btnAddMs" type="button">+ เพิ่ม Milestone</button></div>
+      </div>
+      <div class="row"><button id="btnCreate">สร้างโครงการ</button></div>
+    </div>
+  </section>
+
+  <!-- Owner -->
+  <section id="owner">
+    <div class="card">
+      <h2>ขอเบิกเงินตาม Milestone (Request Fund Release)</h2>
+      <p class="hint">ทำได้เมื่อหมดเวลาระดมทุนและถึงเป้าหมายแล้ว ขอเบิกทีละ Milestone ตามลำดับ แนบลิงก์หลักฐาน เช่น รูป วิดีโอ รายงาน หรือ IPFS ผู้สนับสนุนจะโหวต และระบบจ่ายเงินอัตโนมัติเมื่อเสียงเห็นด้วยเกิน 50% ของยอดระดมทุน</p>
+      <div class="grid">
+        <div><label>เลขโครงการ</label><input id="rId" type="number" min="1"></div>
+        <div class="full"><label>หลักฐานความสำเร็จ</label><textarea id="rEvidence" placeholder="https://… หรือ ipfs://… พร้อมคำอธิบายผลงาน"></textarea></div>
+      </div>
+      <div class="row"><button id="btnRequest">ส่งคำขอเบิกเงิน</button></div>
+    </div>
+  </section>
+
+  <!-- Mine -->
+  <section id="mine">
+    <div class="card">
+      <h2>โครงการของฉัน</h2>
+      <p class="hint">โครงการที่ Wallet นี้เป็นเจ้าของ และโครงการที่เคยสนับสนุน</p>
+      <button id="btnMine">โหลดรายการ</button>
+      <div id="mineOut" class="result"></div>
+    </div>
+  </section>
+</main>
+<div id="log"></div>
+
+<script>
+const ABI = [{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"id","type":"uint256"},{"indexed":true,"internalType":"address","name":"owner","type":"address"},{"indexed":false,"internalType":"string","name":"title","type":"string"},{"indexed":false,"internalType":"uint256","name":"goal","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"deadline","type":"uint256"}],"name":"CampaignCreated","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"id","type":"uint256"},{"indexed":true,"internalType":"address","name":"backer","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"totalRaised","type":"uint256"}],"name":"Contributed","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"id","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"milestoneIndex","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"round","type":"uint256"}],"name":"MilestoneRejected","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"id","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"milestoneIndex","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"MilestoneReleased","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"id","type":"uint256"},{"indexed":true,"internalType":"address","name":"backer","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"Refunded","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"id","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"milestoneIndex","type":"uint256"},{"indexed":false,"internalType":"string","name":"evidence","type":"string"},{"indexed":false,"internalType":"uint256","name":"round","type":"uint256"}],"name":"ReleaseRequested","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"id","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"milestoneIndex","type":"uint256"},{"indexed":true,"internalType":"address","name":"voter","type":"address"},{"indexed":false,"internalType":"bool","name":"approve","type":"bool"},{"indexed":false,"internalType":"uint256","name":"weight","type":"uint256"}],"name":"Voted","type":"event"},{"inputs":[],"name":"APPROVAL_PERCENT","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"campaignCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"id","type":"uint256"}],"name":"contribute","outputs":[],"stateMutability":"payable","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"},{"internalType":"address","name":"","type":"address"}],"name":"contributionOf","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"string","name":"title","type":"string"},{"internalType":"string","name":"description","type":"string"},{"internalType":"uint256","name":"goal","type":"uint256"},{"internalType":"uint256","name":"durationSeconds","type":"uint256"},{"internalType":"string[]","name":"milestoneDescs","type":"string[]"},{"internalType":"uint256[]","name":"milestoneAmounts","type":"uint256[]"}],"name":"createCampaign","outputs":[{"internalType":"uint256","name":"id","type":"uint256"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"id","type":"uint256"}],"name":"getCampaign","outputs":[{"components":[{"internalType":"uint256","name":"id","type":"uint256"},{"internalType":"address","name":"owner","type":"address"},{"internalType":"string","name":"title","type":"string"},{"internalType":"string","name":"description","type":"string"},{"internalType":"uint256","name":"goal","type":"uint256"},{"internalType":"uint256","name":"deadline","type":"uint256"},{"internalType":"uint256","name":"raised","type":"uint256"},{"internalType":"uint256","name":"released","type":"uint256"},{"internalType":"uint256","name":"refunded","type":"uint256"},{"internalType":"uint256","name":"backerCount","type":"uint256"},{"internalType":"uint256","name":"currentMilestone","type":"uint256"},{"internalType":"uint256","name":"createdAt","type":"uint256"}],"internalType":"struct Crowdfunding.Campaign","name":"","type":"tuple"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"backer","type":"address"}],"name":"getCampaignsBacked","outputs":[{"internalType":"uint256[]","name":"","type":"uint256[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"owner_","type":"address"}],"name":"getCampaignsOf","outputs":[{"internalType":"uint256[]","name":"","type":"uint256[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"id","type":"uint256"}],"name":"getMilestones","outputs":[{"components":[{"internalType":"string","name":"description","type":"string"},{"internalType":"uint256","name":"allocation","type":"uint256"},{"internalType":"enum Crowdfunding.MilestoneStatus","name":"status","type":"uint8"},{"internalType":"string","name":"evidence","type":"string"},{"internalType":"uint256","name":"approveWeight","type":"uint256"},{"internalType":"uint256","name":"rejectWeight","type":"uint256"},{"internalType":"uint256","name":"round","type":"uint256"},{"internalType":"uint256","name":"paidAmount","type":"uint256"},{"internalType":"uint256","name":"releasedAt","type":"uint256"}],"internalType":"struct Crowdfunding.Milestone[]","name":"","type":"tuple[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"id","type":"uint256"}],"name":"getProgress","outputs":[{"internalType":"uint256","name":"raised","type":"uint256"},{"internalType":"uint256","name":"goal","type":"uint256"},{"internalType":"uint256","name":"percent","type":"uint256"},{"internalType":"uint256","name":"timeLeft","type":"uint256"},{"internalType":"bool","name":"ended","type":"bool"},{"internalType":"bool","name":"successful","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"id","type":"uint256"}],"name":"getTransactions","outputs":[{"components":[{"internalType":"enum Crowdfunding.TxType","name":"txType","type":"uint8"},{"internalType":"address","name":"account","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"},{"internalType":"uint256","name":"milestoneIndex","type":"uint256"},{"internalType":"uint256","name":"timestamp","type":"uint256"}],"internalType":"struct Crowdfunding.TxRecord[]","name":"","type":"tuple[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"id","type":"uint256"},{"internalType":"uint256","name":"milestoneIndex","type":"uint256"},{"internalType":"address","name":"voter","type":"address"}],"name":"hasVoted","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"id","type":"uint256"}],"name":"lockedFunds","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"id","type":"uint256"}],"name":"refund","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"id","type":"uint256"},{"internalType":"string","name":"evidence","type":"string"}],"name":"requestRelease","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"id","type":"uint256"},{"internalType":"bool","name":"approve","type":"bool"}],"name":"voteMilestone","outputs":[],"stateMutability":"nonpayable","type":"function"}];
+const MS = ['รอดำเนินการ', 'รอโหวตอนุมัติ', 'จ่ายเงินแล้ว', 'ไม่ผ่าน (ขอใหม่ได้)'];
+const TX = ['เงินเข้า (สนับสนุน)', 'เงินออก (จ่าย Milestone)', 'เงินออก (คืนเงิน)'];
+let provider, signer, account;
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const eth = v => { const s = ethers.formatEther(v); return (s.includes('.') ? s.replace(/(\.\d{0,6})\d*$/, '$1').replace(/\.$/, '') : s) + ' ETH'; };
+const fmtDate = ts => Number(ts) ? new Date(Number(ts) * 1000).toLocaleString('th-TH') : '-';
+const short = a => a.slice(0, 6) + '…' + a.slice(-4);
+function fmtLeft(s) { s = Number(s); if (!s) return 'หมดเวลา'; const d = Math.floor(s / 86400), h = Math.floor(s % 86400 / 3600), m = Math.floor(s % 3600 / 60);
+  return (d ? d + ' วัน ' : '') + (h ? h + ' ชม. ' : '') + (m || (!d && !h) ? (m || 1) + ' นาที' : ''); }
+let tmr;
+function toast(m, ms = 4500) { const l = $('log'); l.textContent = m; l.style.display = 'block'; clearTimeout(tmr); tmr = setTimeout(() => l.style.display = 'none', ms); }
+const errMsg = e => e?.reason || e?.info?.error?.message || e?.shortMessage || e?.message || String(e);
+
+document.querySelectorAll('nav button').forEach(b => b.onclick = () => {
+  document.querySelectorAll('nav button, section').forEach(x => x.classList.remove('active'));
+  b.classList.add('active'); $(b.dataset.tab).classList.add('active');
+});
+try { $('contractAddr').value = localStorage.getItem('fundContract') || ''; } catch {}
+$('contractAddr').onchange = () => { try { localStorage.setItem('fundContract', $('contractAddr').value.trim()); } catch {} };
+
+function C(write = false) {
+  const addr = $('contractAddr').value.trim();
+  if (!ethers.isAddress(addr)) throw new Error('กรุณาใส่ Contract address ที่ถูกต้อง (คัดลอกจาก Remix หลัง Deploy)');
+  if (!provider) { if (!window.ethereum) throw new Error('ไม่พบ MetaMask'); provider = new ethers.BrowserProvider(window.ethereum); }
+  if (write && !signer) throw new Error('กรุณากด "เชื่อมต่อ Wallet" ก่อน');
+  return new ethers.Contract(addr, ABI, write ? signer : provider);
+}
+async function send(fn, okMsg) {
+  try { const tx = await fn(C(true)); toast('⏳ กำลังส่งธุรกรรม… ' + tx.hash); const rc = await tx.wait(); toast('✅ ' + okMsg); return rc; }
+  catch (e) { toast('❌ ' + errMsg(e)); return null; }
+}
+
+$('btnConnect').onclick = async () => {
+  try {
+    if (!window.ethereum) throw new Error('ไม่พบ MetaMask');
+    provider = new ethers.BrowserProvider(window.ethereum);
+    await provider.send('eth_requestAccounts', []);
+    signer = await provider.getSigner(); account = await signer.getAddress();
+    $('acct').textContent = short(account) + ' · chain ' + (await provider.getNetwork()).chainId;
+    toast('เชื่อมต่อ Wallet แล้ว');
+  } catch (e) { toast('❌ ' + errMsg(e)); }
+};
+window.ethereum?.on?.('accountsChanged', () => location.reload());
+
+// ---------- 1. Create ----------
+function addMs(desc = '', amt = '') {
+  const row = document.createElement('div'); row.className = 'ms-row';
+  row.innerHTML = `<input placeholder="เช่น สร้างต้นแบบ" value="${esc(desc)}"><input type="number" step="any" placeholder="ETH" value="${esc(amt)}"><button class="danger sm" type="button">×</button>`;
+  row.querySelector('button').onclick = () => { row.remove(); sumGoal(); };
+  row.querySelectorAll('input')[1].oninput = sumGoal;
+  $('msList').appendChild(row); sumGoal();
+}
+function sumGoal() {
+  let t = 0n; document.querySelectorAll('#msList .ms-row').forEach(r => { const v = r.querySelectorAll('input')[1].value; if (v) try { t += ethers.parseEther(v); } catch {} });
+  $('cGoal').value = ethers.formatEther(t);
+}
+$('btnAddMs').onclick = () => addMs();
+addMs('สร้างต้นแบบ (Prototype)', '0.01'); addMs('ทดสอบกับผู้ใช้จริง (Pilot)', '0.01'); addMs('เปิดตัวผลิตภัณฑ์ (Launch)', '0.01');
+
+$('btnCreate').onclick = async () => {
+  try {
+    const rows = [...document.querySelectorAll('#msList .ms-row')].map(r => r.querySelectorAll('input'));
+    if (!rows.length) throw new Error('ต้องมีอย่างน้อย 1 Milestone');
+    const descs = rows.map(r => r[0].value.trim()), amts = rows.map(r => ethers.parseEther(r[1].value || '0'));
+    if (descs.some(d => !d) || amts.some(a => a === 0n)) throw new Error('กรอกรายละเอียดและยอดของทุก Milestone');
+    const goal = amts.reduce((a, b) => a + b, 0n);
+    const dur = BigInt(Number($('cDur').value) * Number($('cUnit').value));
+    const rc = await send(c => c.createCampaign($('cTitle').value.trim(), $('cDesc').value.trim(), goal, dur, descs, amts), 'สร้างโครงการแล้ว');
+    if (rc) {
+      const c = C(); const ev = rc.logs.map(l => { try { return c.interface.parseLog(l); } catch { return null; } }).find(x => x?.name === 'CampaignCreated');
+      if (ev) { toast('✅ สร้างโครงการเลขที่ ' + ev.args.id, 8000); $('dId').value = ev.args.id; document.querySelector('[data-tab=dash]').click(); loadDash(); }
+    }
+  } catch (e) { toast('❌ ' + errMsg(e)); }
+};
+
+// ---------- 4. Request ----------
+$('btnRequest').onclick = () => send(c => c.requestRelease(Number($('rId').value), $('rEvidence').value.trim()), 'ส่งคำขอเบิกเงินแล้ว รอผู้สนับสนุนโหวต');
+
+// ---------- 3 + 7. Dashboard (+2, 5, 6 actions) ----------
+async function loadDash() {
+  const out = $('dashOut');
+  try {
+    const id = Number($('dId').value); if (!id) throw new Error('กรุณาใส่เลขโครงการ');
+    const c = C();
+    const [cp, pg, ms, txs, locked] = await Promise.all([c.getCampaign(id), c.getProgress(id), c.getMilestones(id), c.getTransactions(id), c.lockedFunds(id)]);
+    const [raised, goal, percent, timeLeft, ended] = pg;
+    const failed = ended && raised < goal;
+    const myContrib = account ? await c.contributionOf(id, account) : 0n;
+    const cur = Number(cp.currentMilestone);
+    const myVoted = account && cur < ms.length ? await c.hasVoted(id, cur, account) : false;
+    const isOwner = account && account.toLowerCase() === cp.owner.toLowerCase();
+
+    let stateText = !ended ? '<span class="badge m1">กำลังระดมทุน</span>' : failed ? '<span class="badge m3">ไม่ถึงเป้าหมาย – ขอคืนเงินได้</span>' : cur >= ms.length ? '<span class="badge m2">จ่ายครบทุก Milestone</span>' : '<span class="badge m2">ระดมทุนสำเร็จ</span>';
+    let actions = '';
+    if (!ended && !isOwner) actions += `<div class="row"><input id="amt" type="number" step="any" placeholder="จำนวน ETH" style="max-width:180px"><button id="btnContrib">สนับสนุนโครงการ</button></div>`;
+    if (failed && myContrib > 0n) actions += `<div class="row"><button class="danger" id="btnRefund">ขอคืนเงิน ${eth(myContrib)}</button></div>`;
+
+    const msRows = ms.map((m, i) => {
+      const s = Number(m.status);
+      const pctA = raised ? Number(m.approveWeight * 10000n / raised) / 100 : 0, pctR = raised ? Number(m.rejectWeight * 10000n / raised) / 100 : 0;
+      let vote = '';
+      if (i === cur && s === 1) vote = myContrib > 0n && !myVoted
+        ? `<div class="row" style="margin-top:6px"><button class="okb sm" data-vote="1">✔ อนุมัติ</button><button class="danger sm" data-vote="0">✘ ไม่อนุมัติ</button></div>`
+        : `<div class="hint" style="margin:6px 0 0">${myVoted ? 'คุณโหวตรอบนี้แล้ว' : 'เฉพาะผู้สนับสนุนที่โหวตได้'}</div>`;
+      return `<tr><td>${i + 1}</td><td>${esc(m.description)}${m.evidence ? `<div class="hint" style="margin:4px 0 0">หลักฐาน: ${esc(m.evidence)}</div>` : ''}</td>
+        <td>${eth(m.allocation)}</td>
+        <td><span class="badge m${s}">${MS[s]}</span>${Number(m.round) > 1 ? ` <small>(รอบ ${m.round})</small>` : ''}
+          ${s === 1 ? `<div style="font-size:13px;margin-top:4px">เห็นด้วย ${pctA}% · ไม่เห็นด้วย ${pctR}% <small>(ต้องเกิน 50%)</small></div>` : ''}${vote}</td>
+        <td>${s === 2 ? eth(m.paidAmount) + '<br><small>' + fmtDate(m.releasedAt) + '</small>' : '-'}</td></tr>`;
+    }).join('');
+
+    const txRows = txs.length ? [...txs].reverse().map(t => `<tr><td>${fmtDate(t.timestamp)}</td><td class="t${t.txType}">${TX[Number(t.txType)]}${Number(t.txType) === 1 ? ' #' + (Number(t.milestoneIndex) + 1) : ''}</td>
+      <td class="mono">${short(t.account)}</td><td class="t${t.txType}"><b>${Number(t.txType) === 0 ? '+' : '−'}${eth(t.amount)}</b></td></tr>`).join('')
+      : '<tr><td colspan="4">ยังไม่มีธุรกรรม</td></tr>';
+
+    out.innerHTML = `
+      <h2 style="margin:0">${esc(cp.title)} ${stateText}</h2>
+      <p class="hint" style="margin:4px 0">${esc(cp.description)}</p>
+      <div class="mono">เจ้าของโครงการ: ${cp.owner}${isOwner ? ' (คุณ)' : ''}</div>
+      <div class="progress"><div style="width:${Math.min(Number(percent), 100)}%"></div></div>
+      <div class="stats">
+        <div class="stat"><b>${eth(raised)}</b><span>ยอดสะสม (${percent}%)</span></div>
+        <div class="stat"><b>${eth(goal)}</b><span>เป้าหมาย</span></div>
+        <div class="stat"><b>${ended ? 'หมดเวลา' : fmtLeft(timeLeft)}</b><span>เวลาที่เหลือ · สิ้นสุด ${fmtDate(cp.deadline)}</span></div>
+        <div class="stat"><b>${cp.backerCount}</b><span>ผู้สนับสนุน${myContrib > 0n ? ' · คุณ ' + eth(myContrib) : ''}</span></div>
+        <div class="stat"><b>${eth(cp.released)}</b><span>จ่ายให้เจ้าของแล้ว</span></div>
+        <div class="stat"><b>${eth(cp.refunded)}</b><span>คืนผู้สนับสนุนแล้ว</span></div>
+        <div class="stat"><b>${eth(locked)}</b><span>ล็อกใน Smart Contract</span></div>
+        <div class="stat"><b>${Math.min(cur, ms.length)}/${ms.length}</b><span>Milestone ที่จ่ายแล้ว</span></div>
+      </div>
+      ${actions}
+      <h3 style="margin:22px 0 6px;font-size:16px">สถานะ Milestone</h3>
+      <table><tr><th>#</th><th>รายละเอียด</th><th>ยอดจัดสรร</th><th>สถานะ / ผลโหวต</th><th>จ่ายจริง</th></tr>${msRows}</table>
+      <h3 style="margin:22px 0 6px;font-size:16px">ประวัติเงินเข้า-ออก</h3>
+      <table><tr><th>วันเวลา</th><th>ประเภท</th><th>บัญชี</th><th>จำนวน</th></tr>${txRows}</table>`;
+
+    $('btnContrib') && ($('btnContrib').onclick = async () => {
+      try { const v = ethers.parseEther($('amt').value || '0'); if (!v) throw new Error('ใส่จำนวน ETH');
+        if (await send(c => c.contribute(id, { value: v }), 'สนับสนุนโครงการแล้ว')) loadDash(); } catch (e) { toast('❌ ' + errMsg(e)); }
+    });
+    $('btnRefund') && ($('btnRefund').onclick = async () => { if (await send(c => c.refund(id), 'คืนเงินเรียบร้อย')) loadDash(); });
+    out.querySelectorAll('[data-vote]').forEach(b => b.onclick = async () => {
+      if (await send(c => c.voteMilestone(id, b.dataset.vote === '1'), 'บันทึกการโหวตแล้ว')) loadDash();
+    });
+  } catch (e) { out.innerHTML = ''; toast('❌ ' + errMsg(e)); }
+}
+$('btnLoad').onclick = loadDash;
+
+// ---------- Mine ----------
+$('btnMine').onclick = async () => {
+  try {
+    const c = C(true);
+    const [own, backed] = await Promise.all([c.getCampaignsOf(account), c.getCampaignsBacked(account)]);
+    const row = async (id, role) => { const cp = await c.getCampaign(id); const pg = await c.getProgress(id);
+      return `<tr><td>${id}</td><td>${esc(cp.title)}</td><td>${role}</td><td>${eth(pg[0])} / ${eth(pg[1])} (${pg[2]}%)</td>
+        <td><button class="ghost sm" data-open="${id}">เปิด</button></td></tr>`; };
+    const rows = [...await Promise.all(own.map(i => row(i, 'เจ้าของ'))), ...await Promise.all(backed.map(i => row(i, 'ผู้สนับสนุน')))];
+    $('mineOut').innerHTML = rows.length ? `<table><tr><th>ID</th><th>โครงการ</th><th>บทบาท</th><th>ยอดระดมทุน</th><th></th></tr>${rows.join('')}</table>` : 'ยังไม่มีโครงการ';
+    $('mineOut').querySelectorAll('[data-open]').forEach(b => b.onclick = () => { $('dId').value = b.dataset.open; document.querySelector('[data-tab=dash]').click(); loadDash(); });
+  } catch (e) { toast('❌ ' + errMsg(e)); }
+};
+</script>
+</body>
+</html>
